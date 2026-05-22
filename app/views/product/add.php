@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thêm sản phẩm mới</title>
-    <link rel="stylesheet" href="/project1/public/css/style.css">
+    <link rel="stylesheet" href="/TH-MNM/public/css/style.css">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body>
@@ -22,14 +22,14 @@
                 </div>
             <?php endif; ?>
 
-            <form method="POST" action="/project1/Product/add" enctype="multipart/form-data">
+            <form method="POST" action="/TH-MNM/Product/add" enctype="multipart/form-data">
                 <div class="form-group">
                     <label for="category_id">Danh mục sản phẩm</label>
                     <select id="category_id" name="category_id" style="width: 100%; padding: 1rem 1.25rem; background: rgba(9, 9, 11, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; color: var(--text-main); font-family: inherit; font-size: 1rem; transition: var(--transition); margin-bottom: 0.5rem;" required>
                         <option value="">-- Chọn danh mục --</option>
                         <?php foreach ($categories as $category): ?>
-                            <option value="<?php echo $category->getID(); ?>" <?php echo (isset($_POST['category_id']) && $_POST['category_id'] == $category->getID()) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($category->getName(), ENT_QUOTES, 'UTF-8'); ?>
+                            <option value="<?php echo (int)$category['id']; ?>" <?php echo (isset($_POST['category_id']) && $_POST['category_id'] == $category['id']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($category['name'], ENT_QUOTES, 'UTF-8'); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -63,10 +63,11 @@
         </div>
 
         <div style="text-align: center;">
-            <a href="/project1/Product/list" class="back-link">
+            <a href="/TH-MNM/Product/list" class="back-link">
                 <i class="ph ph-arrow-left"></i> Quay lại danh sách
             </a>
         </div>
     </div>
 </body>
 </html>
+

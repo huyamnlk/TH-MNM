@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sửa Danh mục</title>
-    <link rel="stylesheet" href="/project1/public/css/style.css">
+    <link rel="stylesheet" href="/TH-MNM/public/css/style.css">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body>
@@ -23,15 +23,15 @@
                 </div>
             <?php endif; ?>
 
-            <form method="POST" action="/project1/Category/edit/<?php echo $category->getID(); ?>">
+            <form method="POST" action="/TH-MNM/Category/edit/<?php echo (int)$category['id']; ?>">
                 <div class="form-group">
                     <label for="name">Tên danh mục</label>
-                    <input type="text" id="name" name="name" placeholder="Ví dụ: Điện thoại, Laptop..." value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name'], ENT_QUOTES, 'UTF-8') : htmlspecialchars($category->getName(), ENT_QUOTES, 'UTF-8'); ?>" required>
+                    <input type="text" id="name" name="name" placeholder="Ví dụ: Điện thoại, Laptop..." value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name'], ENT_QUOTES, 'UTF-8') : htmlspecialchars($category['name'], ENT_QUOTES, 'UTF-8'); ?>" required>
                 </div>
                 
                 <div class="form-group">
                     <label for="description">Mô tả chi tiết</label>
-                    <textarea id="description" name="description" placeholder="Nhập mô tả danh mục..." required><?php echo isset($_POST['description']) ? htmlspecialchars($_POST['description'], ENT_QUOTES, 'UTF-8') : htmlspecialchars($category->getDescription(), ENT_QUOTES, 'UTF-8'); ?></textarea>
+                    <textarea id="description" name="description" placeholder="Nhập mô tả danh mục..." required><?php echo isset($_POST['description']) ? htmlspecialchars($_POST['description'], ENT_QUOTES, 'UTF-8') : htmlspecialchars($category['description'], ENT_QUOTES, 'UTF-8'); ?></textarea>
                 </div>
                 
                 <button type="submit" class="btn btn-primary btn-water" style="width: 100%;">
@@ -42,7 +42,7 @@
         </div>
 
         <div style="text-align: center;">
-            <a href="/project1/Category/list" class="back-link">
+            <a href="/TH-MNM/Category/list" class="back-link">
                 <i class="ph ph-arrow-left"></i> Quay lại danh sách
             </a>
         </div>

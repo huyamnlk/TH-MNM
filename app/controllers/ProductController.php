@@ -1,208 +1,227 @@
 <?php
-require_once 'app/models/ProductModel.php';
-require_once 'app/models/CategoryModel.php';
+require_once 'app/config/database.php';
+
 class ProductController
 {
-private $products = [];
-public function __construct()
-{
-// Giả sử chúng ta lưu trữ sản phẩm trong session để giữ lại khi làm mới trang
-session_start();
-if (isset($_SESSION['products'])) {
-$this->products = $_SESSION['products'];
-}
-}
-public function index()
-{
-$this->list();
-}
+    private $conn;
+
+    public function __construct()
+    {
+        $this->conn = Database::getConnection();
+    }
+
+    public function index()
+    {
+        $this->list();
+    }
+
     public function list()
     {
-        // Lấy danh sách category để hiển thị tên danh mục và cho bộ lọc
-        $categories = [];
-        if (isset($_SESSION['categories'])) {
-            $categories = $_SESSION['categories'];
+        $search = trim($_GET['search'] ?? '');
+        $category_filter = trim($_GET['category_filter'] ?? '');
+
+        $catStmt = $this->conn->query("SELECT id, name FROM category ORDER BY name ASC");
+        $categories = $catStmt->fetchAll();
+
+        $sql = "SELECT p.id, p.name, p.description, p.price, p.image, p.category_id, c.name AS category_name
+                FROM product p
+                LEFT JOIN category c ON p.category_id = c.id
+                WHERE 1=1";
+        $params = [];
+
+        if ($search !== '') {
+            $sql .= " AND (p.name LIKE :search OR p.description LIKE :search)";
+            $params['search'] = '%' . $search . '%';
         }
 
-        // Xử lý tìm kiếm và lọc
-        $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-        $category_filter = isset($_GET['category_filter']) ? $_GET['category_filter'] : '';
-        
-        $products = [];
-        foreach ($this->products as $p) {
-            $matchSearch = true;
-            $matchCategory = true;
-            
-            if ($search !== '') {
-                $nameMatch = mb_stripos($p->getName(), $search, 0, 'UTF-8') !== false;
-                $descMatch = mb_stripos($p->getDescription(), $search, 0, 'UTF-8') !== false;
-                if (!$nameMatch && !$descMatch) {
-                    $matchSearch = false;
-                }
-            }
-            
-            if ($category_filter !== '') {
-                if ($p->getCategoryID() != $category_filter) {
-                    $matchCategory = false;
-                }
-            }
-            
-            if ($matchSearch && $matchCategory) {
-                $products[] = $p;
-            }
+        if ($category_filter !== '') {
+            $sql .= " AND p.category_id = :category_id";
+            $params['category_id'] = (int)$category_filter;
         }
-        
+
+        $sql .= " ORDER BY p.id DESC";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+        $products = $stmt->fetchAll();
+
         include 'app/views/product/list.php';
     }
+
+    public function show($id)
+    {
+        $id = (int)$id;
+
+        $stmt = $this->conn->prepare("SELECT p.id, p.name, p.description, p.price, p.image, p.category_id, c.name AS category_name
+                                      FROM product p
+                                      LEFT JOIN category c ON p.category_id = c.id
+                                      WHERE p.id = :id");
+        $stmt->execute(['id' => $id]);
+        $product = $stmt->fetch();
+
+        if (!$product) {
+            die('Product not found');
+        }
+
+        $catStmt = $this->conn->query("SELECT id, name FROM category ORDER BY name ASC");
+        $categories = $catStmt->fetchAll();
+
+        include 'app/views/product/show.php';
+    }
+
     public function add()
     {
-        // Lấy danh sách danh mục để hiển thị trong dropdown
-        $categories = isset($_SESSION['categories']) ? $_SESSION['categories'] : [];
         $errors = [];
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $name = $_POST['name'];
-            $description = $_POST['description'];
-            $price = $_POST['price'];
-            $category_id = isset($_POST['category_id']) ? $_POST['category_id'] : null;
+        $catStmt = $this->conn->query("SELECT id, name FROM category ORDER BY name ASC");
+        $categories = $catStmt->fetchAll();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $name = trim($_POST['name'] ?? '');
+            $description = trim($_POST['description'] ?? '');
+            $price = $_POST['price'] ?? '';
+            $category_id = ($_POST['category_id'] ?? '') !== '' ? (int)$_POST['category_id'] : null;
             $imageName = '';
 
-            // Xử lý upload ảnh
-            if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
-                $targetDir = "public/images/";
-                // Tạo tên file duy nhất để tránh trùng lặp
-                $imageName = time() . '_' . basename($_FILES["image"]["name"]);
-                $targetFilePath = $targetDir . $imageName;
-                $fileType = strtolower(pathinfo($targetFilePath, PATHINFO_EXTENSION));
-                
-                // Kiểm tra định dạng
-                $allowTypes = array('jpg', 'png', 'jpeg', 'gif', 'webp');
-                if (in_array($fileType, $allowTypes)) {
-                    // Upload file vào thư mục
-                    if (!move_uploaded_file($_FILES["image"]["tmp_name"], $targetFilePath)) {
-                        $errors[] = 'Có lỗi xảy ra khi upload ảnh.';
-                    }
-                } else {
-                    $errors[] = 'Chỉ cho phép upload file JPG, JPEG, PNG, GIF, WEBP.';
-                }
-            }
-
-            // Kiểm tra tên sản phẩm
-            if (empty($name)) {
+            if ($name === '') {
                 $errors[] = 'Tên sản phẩm là bắt buộc.';
             } elseif (mb_strlen($name, 'UTF-8') < 3 || mb_strlen($name, 'UTF-8') > 100) {
                 $errors[] = 'Tên sản phẩm phải có từ 3 đến 100 ký tự.';
             }
 
-            // Kiểm tra giá
-            if (!is_numeric($price) || $price <= 0) {
+            if (!is_numeric($price) || (float)$price <= 0) {
                 $errors[] = 'Giá phải là một số dương lớn hơn 0.';
             }
 
-            if (empty($errors)) {
-                $id = 1;
-                if (!empty($this->products)) {
-                    $maxId = 0;
-                    foreach ($this->products as $p) {
-                        if ($p->getID() > $maxId) {
-                            $maxId = $p->getID();
-                        }
-                    }
-                    $id = $maxId + 1;
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === 0) {
+                $targetDir = "public/images/";
+                $imageName = time() . '_' . basename($_FILES["image"]["name"]);
+                $targetFilePath = $targetDir . $imageName;
+                $fileType = strtolower(pathinfo($targetFilePath, PATHINFO_EXTENSION));
+                $allowTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+                if (!in_array($fileType, $allowTypes)) {
+                    $errors[] = 'Chỉ cho phép upload file JPG, JPEG, PNG, GIF, WEBP.';
+                } elseif (!move_uploaded_file($_FILES["image"]["tmp_name"], $targetFilePath)) {
+                    $errors[] = 'Có lỗi xảy ra khi upload ảnh.';
                 }
-                $product = new ProductModel($id, $name, $description, $price, $imageName, $category_id);
-                $this->products[] = $product;
-                $_SESSION['products'] = $this->products;
-                header('Location: /project1/Product/list');
+            }
+
+            if (empty($errors)) {
+                $stmt = $this->conn->prepare("INSERT INTO product (name, description, price, image, category_id)
+                                              VALUES (:name, :description, :price, :image, :category_id)");
+                $stmt->execute([
+                    'name' => $name,
+                    'description' => $description,
+                    'price' => (float)$price,
+                    'image' => $imageName !== '' ? $imageName : null,
+                    'category_id' => $category_id
+                ]);
+
+                header('Location: /TH-MNM/Product/list');
                 exit();
             }
         }
+
         include 'app/views/product/add.php';
     }
 
     public function edit($id)
     {
-        // Lấy danh sách danh mục
-        $categories = isset($_SESSION['categories']) ? $_SESSION['categories'] : [];
+        $id = (int)$id;
         $errors = [];
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $name = $_POST['name'];
-            $description = $_POST['description'];
-            $price = $_POST['price'];
-            $category_id = isset($_POST['category_id']) ? $_POST['category_id'] : null;
 
-            // Xử lý upload ảnh (nếu có)
-            $imageName = '';
-            if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
-                $targetDir = "public/images/";
-                $imageName = time() . '_' . basename($_FILES["image"]["name"]);
-                $targetFilePath = $targetDir . $imageName;
-                $fileType = strtolower(pathinfo($targetFilePath, PATHINFO_EXTENSION));
-                
-                $allowTypes = array('jpg', 'png', 'jpeg', 'gif', 'webp');
-                if (in_array($fileType, $allowTypes)) {
-                    if (!move_uploaded_file($_FILES["image"]["tmp_name"], $targetFilePath)) {
-                        $errors[] = 'Có lỗi xảy ra khi upload ảnh.';
-                    }
-                } else {
-                    $errors[] = 'Chỉ cho phép upload file JPG, JPEG, PNG, GIF, WEBP.';
-                }
-            }
+        $catStmt = $this->conn->query("SELECT id, name FROM category ORDER BY name ASC");
+        $categories = $catStmt->fetchAll();
 
-            // Kiểm tra tên sản phẩm
-            if (empty($name)) {
+        $stmt = $this->conn->prepare("SELECT id, name, description, price, image, category_id FROM product WHERE id = :id");
+        $stmt->execute(['id' => $id]);
+        $product = $stmt->fetch();
+
+        if (!$product) {
+            die('Product not found');
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $name = trim($_POST['name'] ?? '');
+            $description = trim($_POST['description'] ?? '');
+            $price = $_POST['price'] ?? '';
+            $category_id = ($_POST['category_id'] ?? '') !== '' ? (int)$_POST['category_id'] : null;
+
+            if ($name === '') {
                 $errors[] = 'Tên sản phẩm là bắt buộc.';
             } elseif (mb_strlen($name, 'UTF-8') < 3 || mb_strlen($name, 'UTF-8') > 100) {
                 $errors[] = 'Tên sản phẩm phải có từ 3 đến 100 ký tự.';
             }
 
-            // Kiểm tra giá
-            if (!is_numeric($price) || $price <= 0) {
+            if (!is_numeric($price) || (float)$price <= 0) {
                 $errors[] = 'Giá phải là một số dương lớn hơn 0.';
             }
 
-            if (empty($errors)) {
-                foreach ($this->products as $key => $product) {
-                    if ($product->getID() == $id) {
-                        $this->products[$key]->setName($name);
-                        $this->products[$key]->setDescription($description);
-                        $this->products[$key]->setPrice($price);
-                        $this->products[$key]->setCategoryID($category_id);
-                        if ($imageName != '') {
-                            // Cập nhật ảnh mới, có thể xóa ảnh cũ nếu muốn
-                            $oldImage = $this->products[$key]->getImage();
-                            if ($oldImage && file_exists("public/images/" . $oldImage)) {
-                                unlink("public/images/" . $oldImage);
-                            }
-                            $this->products[$key]->setImage($imageName);
-                        }
-                        break;
+            $imageName = $product['image'];
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === 0) {
+                $targetDir = "public/images/";
+                $newImageName = time() . '_' . basename($_FILES["image"]["name"]);
+                $targetFilePath = $targetDir . $newImageName;
+                $fileType = strtolower(pathinfo($targetFilePath, PATHINFO_EXTENSION));
+                $allowTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+                if (!in_array($fileType, $allowTypes)) {
+                    $errors[] = 'Chỉ cho phép upload file JPG, JPEG, PNG, GIF, WEBP.';
+                } elseif (!move_uploaded_file($_FILES["image"]["tmp_name"], $targetFilePath)) {
+                    $errors[] = 'Có lỗi xảy ra khi upload ảnh.';
+                } else {
+                    if (!empty($product['image']) && file_exists("public/images/" . $product['image'])) {
+                        unlink("public/images/" . $product['image']);
                     }
+                    $imageName = $newImageName;
                 }
-                $_SESSION['products'] = $this->products;
-                header('Location: /project1/Product/list');
+            }
+
+            if (empty($errors)) {
+                $update = $this->conn->prepare("UPDATE product
+                                                SET name = :name, description = :description, price = :price, image = :image, category_id = :category_id
+                                                WHERE id = :id");
+                $update->execute([
+                    'id' => $id,
+                    'name' => $name,
+                    'description' => $description,
+                    'price' => (float)$price,
+                    'image' => $imageName,
+                    'category_id' => $category_id
+                ]);
+
+                header('Location: /TH-MNM/Product/list');
                 exit();
             }
+
+            $product['name'] = $name;
+            $product['description'] = $description;
+            $product['price'] = $price;
+            $product['category_id'] = $category_id;
+            $product['image'] = $imageName;
         }
-foreach ($this->products as $product) {
-if ($product->getID() == $id) {
-include 'app/views/product/edit.php';
-return;
+
+        include 'app/views/product/edit.php';
+    }
+
+    public function delete($id)
+    {
+        $id = (int)$id;
+
+        $find = $this->conn->prepare("SELECT image FROM product WHERE id = :id");
+        $find->execute(['id' => $id]);
+        $product = $find->fetch();
+
+        if ($product) {
+            if (!empty($product['image']) && file_exists("public/images/" . $product['image'])) {
+                unlink("public/images/" . $product['image']);
+            }
+
+            $delete = $this->conn->prepare("DELETE FROM product WHERE id = :id");
+            $delete->execute(['id' => $id]);
+        }
+
+        header('Location: /TH-MNM/Product/list');
+        exit();
+    }
 }
-}
-die('Product not found');
-}
-public function delete($id)
-{
-foreach ($this->products as $key => $product) {
-if ($product->getID() == $id) {
-unset($this->products[$key]);
-break;
-}
-}
-$this->products = array_values($this->products);
-$_SESSION['products'] = $this->products;
-header('Location: /project1/Product/list');
-exit();
-}
-}
-?>
