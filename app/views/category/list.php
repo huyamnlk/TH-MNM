@@ -1,6 +1,23 @@
 <?php $pageTitle = 'Quản lý Danh mục'; include 'app/views/shares/header.php'; ?>
 
 <div class="container">
+    <?php if (!empty($_SESSION['error_message'])): ?>
+        <div class="glass-panel" style="border: 1px solid rgba(248, 113, 113, 0.5); background: rgba(127, 29, 29, 0.2); color: #fecaca; margin-bottom: 1rem;">
+            <?php
+                echo htmlspecialchars($_SESSION['error_message'], ENT_QUOTES, 'UTF-8');
+                unset($_SESSION['error_message']);
+            ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if (!empty($_SESSION['success_message'])): ?>
+        <div class="glass-panel" style="border: 1px solid rgba(74, 222, 128, 0.5); background: rgba(20, 83, 45, 0.2); color: #bbf7d0; margin-bottom: 1rem;">
+            <?php
+                echo htmlspecialchars($_SESSION['success_message'], ENT_QUOTES, 'UTF-8');
+                unset($_SESSION['success_message']);
+            ?>
+        </div>
+    <?php endif; ?>
     <h1>Quản lý Danh mục</h1>
     <div class="header-actions">
         <a href="/TH-MNM/Category/add" class="btn btn-primary btn-water">

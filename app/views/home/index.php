@@ -1,249 +1,117 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bán hàng đa cấp - Quản lý bán hàng chuyên nghiệp</title>
-    <link rel="stylesheet" href="/TH-MNM/public/css/style.css">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <style>
-        .home-wrap {
-            max-width: 1200px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 2;
-        }
+<?php
+$pageTitle = 'Trang trưng bày sản phẩm';
+include 'app/views/shares/header.php';
 
-        .hero {
-            padding: 4rem 1rem 2rem;
-            text-align: center;
-        }
+require_once 'app/config/database.php';
+$conn = Database::getConnection();
 
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: .5rem;
-            padding: .5rem 1rem;
-            border-radius: 999px;
-            border: 1px solid rgba(167, 139, 250, 0.4);
-            background: rgba(167, 139, 250, 0.12);
-            color: #ddd6fe;
-            font-size: .9rem;
-            margin-bottom: 1rem;
-            backdrop-filter: blur(10px);
-        }
+$search = trim($_GET['search'] ?? '');
+$categoryFilter = trim($_GET['category_filter'] ?? '');
 
-        .hero h1 {
-            font-size: clamp(2.2rem, 6vw, 4.2rem);
-            line-height: 1.1;
-            margin-bottom: 1rem;
-            letter-spacing: -0.03em;
-        }
+$catStmt = $conn->query("SELECT id, name FROM category ORDER BY name ASC");
+$categories = $catStmt->fetchAll();
 
-        .hero p {
-            max-width: 760px;
-            margin: 0 auto 2rem;
-            color: var(--text-muted);
-            font-size: clamp(1rem, 2vw, 1.2rem);
-        }
+$sql = "SELECT p.id, p.name, p.description, p.price, p.image, p.category_id, c.name AS category_name
+        FROM product p
+        LEFT JOIN category c ON p.category_id = c.id
+        WHERE 1=1";
+$params = [];
 
-        .hero-actions {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin-bottom: 2.5rem;
-        }
+if ($search !== '') {
+    $sql .= " AND (p.name LIKE :search OR p.description LIKE :search)";
+    $params['search'] = '%' . $search . '%';
+}
 
-        .hero-stats {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0,1fr));
-            gap: 1rem;
-            max-width: 900px;
-            margin: 0 auto;
-        }
+if ($categoryFilter !== '') {
+    $sql .= " AND p.category_id = :category_id";
+    $params['category_id'] = (int)$categoryFilter;
+}
 
-        .stat-card {
-            background: rgba(15, 23, 42, 0.45);
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 18px;
-            padding: 1rem 1.25rem;
-            backdrop-filter: blur(16px);
-        }
+$sql .= " ORDER BY p.id DESC";
 
-        .stat-card strong {
-            display: block;
-            font-size: 1.5rem;
-            color: #f8fafc;
-            margin-bottom: .2rem;
-        }
+$stmt = $conn->prepare($sql);
+$stmt->execute($params);
+$products = $stmt->fetchAll();
+?>
 
-        .stat-card span {
-            color: var(--text-muted);
-            font-size: .92rem;
-        }
+<div class="container">
+    <section class="glass-panel" style="padding: 2rem; margin-bottom: 1.2rem; text-align: center;">
+        <h1 style="margin-bottom: .5rem;">Chào mừng đến với cửa hàng</h1>
+        <p style="color: var(--text-muted); max-width: 760px; margin: 0 auto;">
+            Khám phá các sản phẩm nổi bật, thêm vào giỏ hàng và tiến hành đặt hàng trực tiếp ngay trên website.
+        </p>
+    </section>
 
-        .quick-sections {
-            margin-top: 2.5rem;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.25rem;
-        }
-
-        .quick-card {
-            position: relative;
-            overflow: hidden;
-            background: linear-gradient(145deg, rgba(30,41,59,.6), rgba(15,23,42,.45));
-            border: 1px solid rgba(255,255,255,.12);
-            border-radius: 20px;
-            padding: 1.4rem;
-            backdrop-filter: blur(16px);
-            transition: var(--transition);
-        }
-
-        .quick-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 18px 36px rgba(0,0,0,.35), 0 0 0 1px rgba(167,139,250,.25) inset;
-        }
-
-        .quick-card .icon {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: .8rem;
-            background: linear-gradient(135deg, rgba(99,102,241,.35), rgba(236,72,153,.25));
-            border: 1px solid rgba(255,255,255,.16);
-            color: #e9d5ff;
-            font-size: 1.5rem;
-        }
-
-        .quick-card h3 {
-            font-size: 1.2rem;
-            margin-bottom: .35rem;
-            color: #fff;
-        }
-
-        .quick-card p {
-            color: var(--text-muted);
-            font-size: .95rem;
-            margin-bottom: 1rem;
-        }
-
-        .features {
-            margin-top: 2.2rem;
-            margin-bottom: 2rem;
-            padding: 1.5rem;
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,.1);
-            background: rgba(15, 23, 42, 0.38);
-            backdrop-filter: blur(14px);
-        }
-
-        .features h2 {
-            margin-bottom: .9rem;
-            text-align: left;
-        }
-
-        .feature-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
-            gap: .8rem;
-        }
-
-        .feature-item {
-            padding: .85rem 1rem;
-            border-radius: 12px;
-            background: rgba(255,255,255,.03);
-            border: 1px solid rgba(255,255,255,.08);
-            color: #e5e7eb;
-            display: flex;
-            align-items: center;
-            gap: .55rem;
-            font-size: .93rem;
-        }
-
-        .feature-item i {
-            color: #a78bfa;
-            font-size: 1.05rem;
-        }
-
-        @media (max-width: 900px) {
-            .hero-stats {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="home-wrap">
-        <section class="hero">
-            <span class="hero-badge">
-                <i class="ph ph-sparkle"></i>
-                Nền tảng quản lý bán hàng hiện đại
-            </span>
-            <h1>Bán hàng đa cấp Dashboard</h1>
-            <p>Quản lý sản phẩm và danh mục tập trung trên một giao diện chuyên nghiệp, trực quan, mượt mà và tối ưu cho vận hành hàng ngày.</p>
-
-            <div class="hero-actions">
-                <a href="/TH-MNM/Product/list" class="btn btn-primary btn-water">
-                    <i class="ph ph-package"></i>&nbsp; Quản lý sản phẩm
+    <div class="glass-panel" style="padding: 1.5rem 2rem; margin-bottom: 1.5rem;">
+        <form method="GET" action="/TH-MNM/" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+            <div style="flex-grow: 1; min-width: 250px;">
+                <div style="position: relative;">
+                    <i class="ph ph-magnifying-glass" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1.2rem;"></i>
+                    <input type="text" name="search" placeholder="Tìm kiếm sản phẩm..." value="<?php echo htmlspecialchars($search, ENT_QUOTES, 'UTF-8'); ?>" style="padding-left: 2.75rem; margin-bottom: 0;">
+                </div>
+            </div>
+            <div style="min-width: 220px;">
+                <select name="category_filter" style="width: 100%; padding: 1rem 1.25rem; background: rgba(9, 9, 11, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; color: var(--text-main); font-family: inherit; font-size: 1rem; transition: var(--transition);">
+                    <option value="">Tất cả danh mục</option>
+                    <?php foreach ($categories as $category): ?>
+                        <option value="<?php echo (int)$category['id']; ?>" <?php echo ($categoryFilter !== '' && (int)$categoryFilter === (int)$category['id']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($category['name'], ENT_QUOTES, 'UTF-8'); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-outline btn-water">
+                <i class="ph ph-funnel"></i>&nbsp;Lọc
+            </button>
+            <?php if ($search !== '' || $categoryFilter !== ''): ?>
+                <a href="/TH-MNM/" class="btn btn-outline btn-water" title="Xóa bộ lọc">
+                    <i class="ph ph-x"></i>
                 </a>
-                <a href="/TH-MNM/Category/list" class="btn btn-outline btn-water">
-                    <i class="ph ph-squares-four"></i>&nbsp; Quản lý danh mục
-                </a>
-            </div>
-
-            <div class="hero-stats">
-                <div class="stat-card">
-                    <strong>Minh bạch nguồn gốc</strong>
-                    <span>Thông tin sản phẩm rõ ràng, dễ kiểm chứng</span>
-                </div>
-                <div class="stat-card">
-                    <strong>Cam kết chất lượng</strong>
-                    <span>Chính sách bảo hành và đổi trả minh bạch</span>
-                </div>
-                <div class="stat-card">
-                    <strong>Hỗ trợ tận tâm</strong>
-                    <span>Đồng hành cùng khách hàng trước và sau bán</span>
-                </div>
-            </div>
-        </section>
-
-        <section class="quick-sections">
-            <article class="quick-card">
-                <div class="icon"><i class="ph ph-package"></i></div>
-                <h3>Sản phẩm</h3>
-                <p>Quản lý tên, mô tả, ảnh, giá và phân loại sản phẩm với thao tác trực quan.</p>
-                <a href="/TH-MNM/Product/list" class="btn btn-outline btn-water">Vào trang sản phẩm</a>
-            </article>
-
-            <article class="quick-card">
-                <div class="icon"><i class="ph ph-squares-four"></i></div>
-                <h3>Danh mục</h3>
-                <p>Tổ chức hệ thống danh mục khoa học để phân loại dữ liệu nhanh hơn.</p>
-                <a href="/TH-MNM/Category/list" class="btn btn-outline btn-water">Vào trang danh mục</a>
-            </article>
-
-            <article class="quick-card">
-                <div class="icon"><i class="ph ph-chart-line-up"></i></div>
-                <h3>Vận hành</h3>
-                <p>Trải nghiệm workflow quản trị tối ưu, rõ ràng, phù hợp mở rộng trong tương lai.</p>
-                <a href="/TH-MNM/Product/add" class="btn btn-outline btn-water">Tạo sản phẩm mới</a>
-            </article>
-        </section>
-
-        <section class="features">
-            <h2>Tính năng nổi bật</h2>
-            <div class="feature-list">
-                <div class="feature-item"><i class="ph ph-check-circle"></i> Tìm kiếm & lọc sản phẩm theo danh mục</div>
-                <div class="feature-item"><i class="ph ph-check-circle"></i> Upload ảnh sản phẩm trực tiếp</div>
-                <div class="feature-item"><i class="ph ph-check-circle"></i> Giao diện responsive cho desktop/mobile</div>
-                <div class="feature-item"><i class="ph ph-check-circle"></i> Hệ thống route chuẩn theo module</div>
-            </div>
-        </section>
+            <?php endif; ?>
+        </form>
     </div>
-</body>
-</html>
+
+    <?php if (empty($products)): ?>
+        <div class="empty-state">
+            <i class="ph ph-package" style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+            <p>Không có sản phẩm phù hợp.</p>
+        </div>
+    <?php else: ?>
+        <div class="product-grid">
+            <?php foreach ($products as $product): ?>
+                <div class="product-card">
+                    <?php if (!empty($product['image'])): ?>
+                        <div class="product-image" style="margin-bottom: 1.25rem; border-radius: 12px; overflow: hidden; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.2); height: 200px;">
+                            <img src="/TH-MNM/public/images/<?php echo htmlspecialchars($product['image'], ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                    <?php else: ?>
+                        <div class="product-image-placeholder" style="margin-bottom: 1.25rem; border-radius: 12px; height: 200px; display: flex; justify-content: center; align-items: center; background: rgba(255,255,255,0.03); color: var(--text-muted); border: 1px dashed rgba(255,255,255,0.1);">
+                            <i class="ph ph-image" style="font-size: 4rem; opacity: 0.3;"></i>
+                        </div>
+                    <?php endif; ?>
+
+                    <div style="margin-bottom: 0.5rem;">
+                        <span style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 500; border: 1px solid rgba(139, 92, 246, 0.3);">
+                            <?php echo htmlspecialchars($product['category_name'] ?? 'Chưa phân loại', ENT_QUOTES, 'UTF-8'); ?>
+                        </span>
+                    </div>
+
+                    <h2><?php echo htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8'); ?></h2>
+                    <p class="product-desc"><?php echo nl2br(htmlspecialchars($product['description'], ENT_QUOTES, 'UTF-8')); ?></p>
+                    <div class="product-price"><?php echo number_format((float)$product['price'], 0, ',', '.'); ?> đ</div>
+
+                    <div class="product-actions">
+                        <a href="/TH-MNM/Product/addToCart/<?php echo (int)$product['id']; ?>" class="btn btn-primary btn-water">
+                            <i class="ph ph-shopping-cart-simple" style="margin-right: 0.25rem;"></i> Thêm vào giỏ
+                        </a>
+                        <a href="/TH-MNM/Product/show/<?php echo (int)$product['id']; ?>" class="btn btn-outline btn-water">
+                            <i class="ph ph-eye" style="margin-right: 0.25rem;"></i> Xem chi tiết
+                        </a>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+</div>
+
+<?php include 'app/views/shares/footer.php'; ?>

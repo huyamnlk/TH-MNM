@@ -1,28 +1,24 @@
-# TODO - Build full web bán hàng (Product + Category CRUD + UI upgrade)
+# TODO - Cart + Home Shop + Category Delete Guard + Session Init
 
-- [ ] Hoàn thiện backend cơ bản
-  - [x] Thêm `show($id)` cho ProductController
-  - [ ] Thêm `show($id)` cho CategoryController
-  - [x] Chuẩn hóa `session_start()` an toàn trong controllers
-  - [x] Chuẩn hóa redirect path `/TH-MNM/...`
-
-- [ ] Hoàn thiện view chức năng cơ bản
-  - [ ] Tạo `app/views/product/show.php`
-  - [ ] Tạo `app/views/category/show.php`
-  - [ ] Thêm nút "Xem" ở list Product/Category
-  - [ ] Bổ sung điều hướng thống nhất giữa các trang
-
-- [ ] Hoàn thiện layout dùng chung
-  - [ ] Tạo `app/views/shares/header.php`
-  - [ ] Tạo `app/views/shares/footer.php`
-  - [ ] Gắn header/footer vào các trang home, product, category
-
-- [ ] Nâng cấp giao diện
-  - [ ] Cải tiến `public/css/style.css` (hero, card, button, detail view, responsive)
-  - [ ] Hiệu ứng hover/transition đẹp và đồng bộ
-
-- [ ] Kiểm tra sau triển khai
-  - [ ] Kiểm tra route và điều hướng
-  - [ ] Kiểm tra CRUD Product (add/edit/delete/show/list)
-  - [ ] Kiểm tra CRUD Category (add/edit/delete/show/list)
-  - [ ] Kiểm tra hiển thị UI trên các trang chính
+- [x] Cập nhật `index.php` để `session_start()` ở đầu mỗi request (an toàn, tránh gọi lặp).
+- [x] Refactor `app/controllers/ProductController.php`:
+  - [x] Sửa logic giỏ hàng sai/thiếu (`addToCart`, `cart`, `updateCart`, `removeFromCart`, `clearCart`).
+  - [x] Sửa `checkout` + `processCheckout` dùng `$this->conn` (PDO) đồng nhất.
+  - [x] Sau thanh toán thành công: `unset($_SESSION['cart'])`.
+  - [x] Redirect path chuẩn `/TH-MNM/...`.
+- [x] Cập nhật `app/controllers/CategoryController.php`:
+  - [x] Chặn xóa danh mục nếu còn sản phẩm thuộc danh mục đó.
+- [x] Chuyển `app/views/home/index.php` thành trang trưng bày bán hàng:
+  - [x] Hiển thị danh sách sản phẩm dạng showcase.
+  - [x] Có nút thêm vào giỏ hàng.
+- [x] Cập nhật `app/views/product/list.php`:
+  - [x] Bổ sung nút “Thêm vào giỏ”.
+- [x] Cập nhật `app/views/shares/header.php`:
+  - [x] Bổ sung link giỏ hàng + badge số lượng từ session.
+- [x] Tạo các view mới cho giỏ hàng/đặt hàng:
+  - [x] `app/views/product/cart.php`
+  - [x] `app/views/product/checkout.php`
+  - [x] `app/views/product/order_confirmation.php`
+- [x] Cập nhật `app/views/category/list.php`:
+  - [x] Hiển thị thông báo phù hợp khi danh mục không xóa được (nếu có).
+- [x] Rà soát syntax/logic toàn bộ flow.

@@ -15,9 +15,23 @@
                 Bán hàng đa cấp
             </a>
             <nav style="display:flex; gap:.5rem; flex-wrap:wrap;">
+                <?php
+                    $cartCount = 0;
+                    if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
+                        foreach ($_SESSION['cart'] as $ci) {
+                            $cartCount += (int)($ci['quantity'] ?? 0);
+                        }
+                    }
+                ?>
                 <a class="btn btn-outline btn-water" href="/TH-MNM/"><i class="ph ph-house"></i>&nbsp;Trang chủ</a>
                 <a class="btn btn-outline btn-water" href="/TH-MNM/Product/list"><i class="ph ph-package"></i>&nbsp;Sản phẩm</a>
                 <a class="btn btn-outline btn-water" href="/TH-MNM/Category/list"><i class="ph ph-squares-four"></i>&nbsp;Danh mục</a>
+                <a class="btn btn-primary btn-water" href="/TH-MNM/Product/cart">
+                    <i class="ph ph-shopping-cart"></i>&nbsp;Giỏ hàng
+                    <span style="display:inline-flex; min-width:22px; height:22px; padding:0 .45rem; border-radius:999px; align-items:center; justify-content:center; margin-left:.35rem; background:rgba(255,255,255,.2); font-size:.82rem;">
+                        <?php echo (int)$cartCount; ?>
+                    </span>
+                </a>
                 <button type="button" id="themeToggleBtn" class="btn btn-outline btn-water" style="min-width: 136px;">
                     <i class="ph ph-moon-stars"></i>&nbsp;<span>Dark mode</span>
                 </button>

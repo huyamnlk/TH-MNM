@@ -67,6 +67,9 @@
                     <div class="product-price"><?php echo number_format((float)$product['price'], 0, ',', '.'); ?> đ</div>
 
                     <div class="product-actions">
+                        <a href="/TH-MNM/Product/addToCart/<?php echo (int)$product['id']; ?>" class="btn btn-primary btn-water">
+                            <i class="ph ph-shopping-cart-simple" style="margin-right: 0.25rem;"></i> Thêm vào giỏ
+                        </a>
                         <a href="/TH-MNM/Product/show/<?php echo (int)$product['id']; ?>" class="btn btn-outline btn-water">
                             <i class="ph ph-eye" style="margin-right: 0.25rem;"></i> Xem
                         </a>

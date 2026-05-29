@@ -224,4 +224,198 @@ class ProductController
         header('Location: /TH-MNM/Product/list');
         exit();
     }
+
+    public function addToCart($id)
+    {
+        $id = (int)$id;
+
+        $stmt = $this->conn->prepare("SELECT id, name, price, image FROM product WHERE id = :id");
+        $stmt->execute(['id' => $id]);
+        $product = $stmt->fetch();
+
+        if (!$product) {
+            die('Không tìm thấy sản phẩm.');
+        }
+
+        if (!isset($_SESSION['cart'])) {
+            $_SESSION['cart'] = [];
+        }
+
+        if (isset($_SESSION['cart'][$id])) {
+            $_SESSION['cart'][$id]['quantity']++;
+        } else {
+            $_SESSION['cart'][$id] = [
+                'id' => (int)$product['id'],
+                'name' => $product['name'],
+                'price' => (float)$product['price'],
+                'quantity' => 1,
+                'image' => $product['image']
+            ];
+        }
+
+        $redirect = trim($_GET['redirect'] ?? '');
+        if ($redirect !== '') {
+            header('Location: ' . $redirect);
+        } else {
+            $referer = $_SERVER['HTTP_REFERER'] ?? '/TH-MNM/';
+            header('Location: ' . $referer);
+        }
+        exit();
+    }
+
+    public function cart()
+    {
+        $cart = isset($_SESSION['cart']) ? $_SESSION['cart'] : [];
+        include 'app/views/product/cart.php';
+    }
+
+    public function updateCart()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /TH-MNM/Product/cart');
+            exit();
+        }
+
+        if (!isset($_SESSION['cart'])) {
+            $_SESSION['cart'] = [];
+        }
+
+        $quantities = $_POST['quantity'] ?? [];
+        foreach ($quantities as $productId => $qty) {
+            $productId = (int)$productId;
+            $qty = (int)$qty;
+
+            if (isset($_SESSION['cart'][$productId])) {
+                if ($qty <= 0) {
+                    unset($_SESSION['cart'][$productId]);
+                } else {
+                    $_SESSION['cart'][$productId]['quantity'] = $qty;
+                }
+            }
+        }
+
+        header('Location: /TH-MNM/Product/cart');
+        exit();
+    }
+
+    public function removeFromCart($id)
+    {
+        $id = (int)$id;
+
+        if (isset($_SESSION['cart'][$id])) {
+            unset($_SESSION['cart'][$id]);
+        }
+
+        header('Location: /TH-MNM/Product/cart');
+        exit();
+    }
+
+    public function clearCart()
+    {
+        unset($_SESSION['cart']);
+        header('Location: /TH-MNM/Product/cart');
+        exit();
+    }
+
+    public function checkout()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $selected = $_POST['selected_items'] ?? [];
+            $selected = array_map('intval', (array)$selected);
+
+            $cart = isset($_SESSION['cart']) && is_array($_SESSION['cart']) ? $_SESSION['cart'] : [];
+            $checkoutItems = [];
+
+            foreach ($selected as $productId) {
+                if (isset($cart[$productId])) {
+                    $checkoutItems[$productId] = $cart[$productId];
+                }
+            }
+
+            if (empty($checkoutItems)) {
+                header('Location: /TH-MNM/Product/cart');
+                exit();
+            }
+
+            $_SESSION['checkout_items'] = $checkoutItems;
+        }
+
+        $checkoutItems = isset($_SESSION['checkout_items']) && is_array($_SESSION['checkout_items']) ? $_SESSION['checkout_items'] : [];
+        if (empty($checkoutItems)) {
+            header('Location: /TH-MNM/Product/cart');
+            exit();
+        }
+
+        $cart = $checkoutItems;
+        include 'app/views/product/checkout.php';
+    }
+
+    public function processCheckout()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /TH-MNM/Product/checkout');
+            exit();
+        }
+
+        if (!isset($_SESSION['checkout_items']) || empty($_SESSION['checkout_items'])) {
+            die('Không có sản phẩm nào được chọn để thanh toán.');
+        }
+
+        $name = trim($_POST['name'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $address = trim($_POST['address'] ?? '');
+
+        if ($name === '' || $phone === '' || $address === '') {
+            die('Vui lòng nhập đầy đủ thông tin nhận hàng.');
+        }
+
+        $this->conn->beginTransaction();
+
+        try {
+            $query = "INSERT INTO orders (name, phone, address) VALUES (:name, :phone, :address)";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute([
+                'name' => $name,
+                'phone' => $phone,
+                'address' => $address
+            ]);
+
+            $order_id = $this->conn->lastInsertId();
+
+            $checkoutItems = $_SESSION['checkout_items'];
+            foreach ($checkoutItems as $product_id => $item) {
+                $detailQuery = "INSERT INTO order_details (order_id, product_id, quantity, price)
+                                VALUES (:order_id, :product_id, :quantity, :price)";
+                $detailStmt = $this->conn->prepare($detailQuery);
+                $detailStmt->execute([
+                    'order_id' => $order_id,
+                    'product_id' => (int)$product_id,
+                    'quantity' => (int)$item['quantity'],
+                    'price' => (float)$item['price']
+                ]);
+
+                if (isset($_SESSION['cart'][$product_id])) {
+                    unset($_SESSION['cart'][$product_id]);
+                }
+            }
+
+            unset($_SESSION['checkout_items']);
+            if (isset($_SESSION['cart']) && empty($_SESSION['cart'])) {
+                unset($_SESSION['cart']);
+            }
+
+            $this->conn->commit();
+
+            header('Location: /TH-MNM/Product/orderConfirmation');
+            exit();
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            die("Đã xảy ra lỗi khi xử lý đơn hàng: " . $e->getMessage());
+        }
+    }
+
+    public function orderConfirmation()
+    {
+        include 'app/views/product/order_confirmation.php';
+    }
 }

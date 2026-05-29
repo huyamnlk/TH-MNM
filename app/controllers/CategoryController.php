@@ -107,9 +107,20 @@ class CategoryController
     {
         $id = (int)$id;
 
+        $check = $this->conn->prepare("SELECT COUNT(*) FROM product WHERE category_id = :id");
+        $check->execute(['id' => $id]);
+        $productCount = (int)$check->fetchColumn();
+
+        if ($productCount > 0) {
+            $_SESSION['error_message'] = 'Không thể xóa danh mục vì vẫn còn sản phẩm thuộc danh mục này.';
+            header('Location: /TH-MNM/Category/list');
+            exit();
+        }
+
         $stmt = $this->conn->prepare("DELETE FROM category WHERE id = :id");
         $stmt->execute(['id' => $id]);
 
+        $_SESSION['success_message'] = 'Xóa danh mục thành công.';
         header('Location: /TH-MNM/Category/list');
         exit();
     }
