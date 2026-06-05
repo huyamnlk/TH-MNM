@@ -1,13 +1,19 @@
-<?php $pageTitle = 'Quản lý Sản phẩm'; include 'app/views/shares/header.php'; ?>
+<?php
+$pageTitle = 'Quản lý Sản phẩm';
+include 'app/views/shares/header.php';
+$isAdminView = class_exists('SessionHelper') ? SessionHelper::isAdmin() : false;
+?>
 
 <div class="container">
     <h1>Quản lý Sản phẩm</h1>
-    <div class="header-actions">
-        <a href="/TH-MNM/Product/add" class="btn btn-primary btn-water">
-            <i class="ph ph-plus-circle" style="font-size: 1.25rem; margin-right: 0.5rem;"></i>
-            Thêm sản phẩm mới
-        </a>
-    </div>
+    <?php if ($isAdminView): ?>
+        <div class="header-actions">
+            <a href="/TH-MNM/Product/add" class="btn btn-primary btn-water">
+                <i class="ph ph-plus-circle" style="font-size: 1.25rem; margin-right: 0.5rem;"></i>
+                Thêm sản phẩm mới
+            </a>
+        </div>
+    <?php endif; ?>
 
     <div class="glass-panel" style="padding: 1.5rem 2rem; margin-top: 1rem; margin-bottom: 2.5rem;">
         <form method="GET" action="/TH-MNM/Product/list" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
@@ -67,18 +73,20 @@
                     <div class="product-price"><?php echo number_format((float)$product['price'], 0, ',', '.'); ?> đ</div>
 
                     <div class="product-actions">
-                        <a href="/TH-MNM/Product/addToCart/<?php echo (int)$product['id']; ?>" class="btn btn-primary btn-water">
+                        <a href="/TH-MNM/Product/addToCart/<?php echo (int)$product['id']; ?>" class="btn btn-primary btn-water btn-sm-card">
                             <i class="ph ph-shopping-cart-simple" style="margin-right: 0.25rem;"></i> Thêm vào giỏ
                         </a>
-                        <a href="/TH-MNM/Product/show/<?php echo (int)$product['id']; ?>" class="btn btn-outline btn-water">
+                        <a href="/TH-MNM/Product/show/<?php echo (int)$product['id']; ?>" class="btn btn-outline btn-water btn-sm-card">
                             <i class="ph ph-eye" style="margin-right: 0.25rem;"></i> Xem
                         </a>
-                        <a href="/TH-MNM/Product/edit/<?php echo (int)$product['id']; ?>" class="btn btn-outline btn-water">
-                            <i class="ph ph-pencil-simple" style="margin-right: 0.25rem;"></i> Sửa
-                        </a>
-                        <a href="/TH-MNM/Product/delete/<?php echo (int)$product['id']; ?>" class="btn btn-danger btn-water" onclick="return confirm('Bạn có chắc chắn muốn xóa sản phẩm này?');">
-                            <i class="ph ph-trash" style="margin-right: 0.25rem;"></i> Xóa
-                        </a>
+                        <?php if ($isAdminView): ?>
+                            <a href="/TH-MNM/Product/edit/<?php echo (int)$product['id']; ?>" class="btn btn-outline btn-water">
+                                <i class="ph ph-pencil-simple" style="margin-right: 0.25rem;"></i> Sửa
+                            </a>
+                            <a href="/TH-MNM/Product/delete/<?php echo (int)$product['id']; ?>" class="btn btn-danger btn-water" onclick="return confirm('Bạn có chắc chắn muốn xóa sản phẩm này?');">
+                                <i class="ph ph-trash" style="margin-right: 0.25rem;"></i> Xóa
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endforeach; ?>

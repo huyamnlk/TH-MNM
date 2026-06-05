@@ -1,5 +1,6 @@
 <?php
 require_once 'app/config/database.php';
+require_once 'app/helpers/SessionHelper.php';
 
 class CategoryController
 {
@@ -35,8 +36,18 @@ class CategoryController
         include 'app/views/category/show.php';
     }
 
+    private function ensureAdmin()
+    {
+        if (!SessionHelper::isAdmin()) {
+            $_SESSION['error_message'] = 'Bạn không có quyền thực hiện chức năng quản trị này.';
+            header('Location: /TH-MNM/Category/list');
+            exit();
+        }
+    }
+
     public function add()
     {
+        $this->ensureAdmin();
         $errors = [];
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $name = trim($_POST['name'] ?? '');
@@ -64,6 +75,7 @@ class CategoryController
 
     public function edit($id)
     {
+        $this->ensureAdmin();
         $id = (int)$id;
         $errors = [];
 
@@ -105,6 +117,7 @@ class CategoryController
 
     public function delete($id)
     {
+        $this->ensureAdmin();
         $id = (int)$id;
 
         $check = $this->conn->prepare("SELECT COUNT(*) FROM product WHERE category_id = :id");

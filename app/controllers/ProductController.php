@@ -1,5 +1,6 @@
 <?php
 require_once 'app/config/database.php';
+require_once 'app/helpers/SessionHelper.php';
 
 class ProductController
 {
@@ -69,8 +70,18 @@ class ProductController
         include 'app/views/product/show.php';
     }
 
+    private function ensureAdmin()
+    {
+        if (!SessionHelper::isAdmin()) {
+            $_SESSION['error_message'] = 'Bạn không có quyền thực hiện chức năng quản trị này.';
+            header('Location: /TH-MNM/Product/list');
+            exit();
+        }
+    }
+
     public function add()
     {
+        $this->ensureAdmin();
         $errors = [];
         $catStmt = $this->conn->query("SELECT id, name FROM category ORDER BY name ASC");
         $categories = $catStmt->fetchAll();
@@ -127,6 +138,7 @@ class ProductController
 
     public function edit($id)
     {
+        $this->ensureAdmin();
         $id = (int)$id;
         $errors = [];
 
@@ -206,6 +218,7 @@ class ProductController
 
     public function delete($id)
     {
+        $this->ensureAdmin();
         $id = (int)$id;
 
         $find = $this->conn->prepare("SELECT image FROM product WHERE id = :id");

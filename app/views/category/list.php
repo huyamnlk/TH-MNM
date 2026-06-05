@@ -1,4 +1,8 @@
-<?php $pageTitle = 'Quản lý Danh mục'; include 'app/views/shares/header.php'; ?>
+<?php
+$pageTitle = 'Quản lý Danh mục';
+include 'app/views/shares/header.php';
+$isAdminView = class_exists('SessionHelper') ? SessionHelper::isAdmin() : false;
+?>
 
 <div class="container">
     <?php if (!empty($_SESSION['error_message'])): ?>
@@ -19,12 +23,14 @@
         </div>
     <?php endif; ?>
     <h1>Quản lý Danh mục</h1>
-    <div class="header-actions">
-        <a href="/TH-MNM/Category/add" class="btn btn-primary btn-water">
-            <i class="ph ph-plus-circle" style="font-size: 1.25rem; margin-right: 0.5rem;"></i>
-            Thêm danh mục mới
-        </a>
-    </div>
+    <?php if ($isAdminView): ?>
+        <div class="header-actions">
+            <a href="/TH-MNM/Category/add" class="btn btn-primary btn-water">
+                <i class="ph ph-plus-circle" style="font-size: 1.25rem; margin-right: 0.5rem;"></i>
+                Thêm danh mục mới
+            </a>
+        </div>
+    <?php endif; ?>
 
     <?php if (empty($categories)): ?>
         <div class="empty-state">
@@ -45,12 +51,14 @@
                         <a href="/TH-MNM/Category/show/<?php echo (int)$category['id']; ?>" class="btn btn-outline btn-water">
                             <i class="ph ph-eye" style="margin-right: 0.25rem;"></i> Xem
                         </a>
-                        <a href="/TH-MNM/Category/edit/<?php echo (int)$category['id']; ?>" class="btn btn-outline btn-water">
-                            <i class="ph ph-pencil-simple" style="margin-right: 0.25rem;"></i> Sửa
-                        </a>
-                        <a href="/TH-MNM/Category/delete/<?php echo (int)$category['id']; ?>" class="btn btn-danger btn-water" onclick="return confirm('Bạn có chắc chắn muốn xóa danh mục này?');">
-                            <i class="ph ph-trash" style="margin-right: 0.25rem;"></i> Xóa
-                        </a>
+                        <?php if ($isAdminView): ?>
+                            <a href="/TH-MNM/Category/edit/<?php echo (int)$category['id']; ?>" class="btn btn-outline btn-water">
+                                <i class="ph ph-pencil-simple" style="margin-right: 0.25rem;"></i> Sửa
+                            </a>
+                            <a href="/TH-MNM/Category/delete/<?php echo (int)$category['id']; ?>" class="btn btn-danger btn-water" onclick="return confirm('Bạn có chắc chắn muốn xóa danh mục này?');">
+                                <i class="ph ph-trash" style="margin-right: 0.25rem;"></i> Xóa
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endforeach; ?>

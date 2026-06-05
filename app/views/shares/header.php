@@ -1,3 +1,18 @@
+<?php
+require_once 'app/helpers/SessionHelper.php';
+
+$isLoggedIn = SessionHelper::isLoggedIn();
+$isAdmin = SessionHelper::isAdmin();
+$role = SessionHelper::getRole();
+$displayName = $_SESSION['fullname'] ?? ($_SESSION['username'] ?? 'Khách');
+
+$cartCount = 0;
+if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
+    foreach ($_SESSION['cart'] as $ci) {
+        $cartCount += (int)($ci['quantity'] ?? 0);
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -14,30 +29,44 @@
                 <i class="ph ph-storefront" style="font-size:1.4rem;"></i>
                 Bán hàng đa cấp
             </a>
-            <nav style="display:flex; gap:.5rem; flex-wrap:wrap;">
-                <?php
-                    $cartCount = 0;
-                    if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
-                        foreach ($_SESSION['cart'] as $ci) {
-                            $cartCount += (int)($ci['quantity'] ?? 0);
-                        }
-                    }
-                ?>
+
+            <nav style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;">
                 <a class="btn btn-outline btn-water" href="/TH-MNM/"><i class="ph ph-house"></i>&nbsp;Trang chủ</a>
                 <a class="btn btn-outline btn-water" href="/TH-MNM/Product/list"><i class="ph ph-package"></i>&nbsp;Sản phẩm</a>
-                <a class="btn btn-outline btn-water" href="/TH-MNM/Category/list"><i class="ph ph-squares-four"></i>&nbsp;Danh mục</a>
-                <a class="btn btn-primary btn-water" href="/TH-MNM/Product/cart">
-                    <i class="ph ph-shopping-cart"></i>&nbsp;Giỏ hàng
-                    <span style="display:inline-flex; min-width:22px; height:22px; padding:0 .45rem; border-radius:999px; align-items:center; justify-content:center; margin-left:.35rem; background:rgba(255,255,255,.2); font-size:.82rem;">
-                        <?php echo (int)$cartCount; ?>
+
+                <?php if ($isAdmin): ?>
+                    <a class="btn btn-outline btn-water" href="/TH-MNM/Category/list"><i class="ph ph-squares-four"></i>&nbsp;Danh mục</a>
+                <?php endif; ?>
+
+                <?php if ($isLoggedIn): ?>
+                    <a class="btn btn-primary btn-water" href="/TH-MNM/Product/cart">
+                        <i class="ph ph-shopping-cart"></i>&nbsp;Giỏ hàng
+                        <span style="display:inline-flex; min-width:22px; height:22px; padding:0 .45rem; border-radius:999px; align-items:center; justify-content:center; margin-left:.35rem; background:rgba(255,255,255,.2); font-size:.82rem;">
+                            <?php echo (int)$cartCount; ?>
+                        </span>
+                    </a>
+                <?php endif; ?>
+
+                <?php if (!$isLoggedIn): ?>
+                    <a class="btn btn-outline btn-water" href="/TH-MNM/Account/login"><i class="ph ph-sign-in"></i>&nbsp;Đăng nhập</a>
+                    <a class="btn btn-primary btn-water" href="/TH-MNM/Account/register"><i class="ph ph-user-plus"></i>&nbsp;Đăng ký</a>
+                <?php else: ?>
+                    <span class="btn btn-outline btn-water" style="pointer-events:none;">
+                        <i class="ph ph-user-circle"></i>&nbsp;<?php echo htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8'); ?>
+                        <span style="margin-left:.4rem; padding:.1rem .45rem; border-radius:999px; background:rgba(139,92,246,.25); border:1px solid rgba(139,92,246,.4); font-size:.75rem;">
+                            <?php echo htmlspecialchars($role, ENT_QUOTES, 'UTF-8'); ?>
+                        </span>
                     </span>
-                </a>
+                    <a class="btn btn-danger btn-water" href="/TH-MNM/Account/logout"><i class="ph ph-sign-out"></i>&nbsp;Đăng xuất</a>
+                <?php endif; ?>
+
                 <button type="button" id="themeToggleBtn" class="btn btn-outline btn-water" style="min-width: 136px;">
                     <i class="ph ph-moon-stars"></i>&nbsp;<span>Dark mode</span>
                 </button>
             </nav>
         </div>
     </header>
+
     <script>
         (function () {
             var root = document.body;
