@@ -1,82 +1,113 @@
 <?php
 class ProductModel
 {
-// Thuộc tính của lớp ProductModel
-    private $ID;
-    private $Name;
-    private $Description;
-    private $Price;
-    private $Image; // Thêm thuộc tính Image
-    private $CategoryID; // Thêm thuộc tính CategoryID
+    private $db;
 
-    // Constructor để khởi tạo đối tượng ProductModel
-    public function __construct($ID, $Name, $Description, $Price, $Image = '', $CategoryID = null)
+    public function __construct($db)
     {
-        $this->ID = $ID;
-        $this->Name = $Name;
-        $this->Description = $Description;
-        $this->Price = $Price;
-        $this->Image = $Image;
-        $this->CategoryID = $CategoryID;
-    }
-// Getter và Setter cho thuộc tính ID
-public function getID()
-{
-return $this->ID;
-}
-public function setID($ID)
-{
-$this->ID = $ID;
-}
-// Getter và Setter cho thuộc tính Name
-public function getName()
-{
-return $this->Name;
-}
-public function setName($Name)
-{
-$this->Name = $Name;
-}
-// Getter và Setter cho thuộc tính Description
-public function getDescription()
-{
-return $this->Description;
-}
-public function setDescription($Description)
-{
-$this->Description = $Description;
-}
-// Getter và Setter cho thuộc tính Price
-    public function getPrice()
-    {
-        return $this->Price;
+        $this->db = $db;
     }
 
-    public function setPrice($Price)
+    public function getProducts()
     {
-        $this->Price = $Price;
+        $stmt = $this->db->query(
+            "SELECT p.id, p.name, p.description, p.price, p.image, p.category_id, c.name AS category_name
+            FROM product p
+            LEFT JOIN category c ON p.category_id = c.id
+            ORDER BY p.id DESC"
+        );
+        return $stmt->fetchAll();
     }
 
-    // Getter và Setter cho thuộc tính Image
-    public function getImage()
+    public function getProductById($id)
     {
-        return $this->Image;
+        $stmt = $this->db->prepare(
+            "SELECT p.id, p.name, p.description, p.price, p.image, p.category_id, c.name AS category_name
+            FROM product p
+            LEFT JOIN category c ON p.category_id = c.id
+            WHERE p.id = :id"
+        );
+        $stmt->execute(['id' => (int)$id]);
+        return $stmt->fetch();
     }
 
-    public function setImage($Image)
+    public function addProduct($name, $description, $price, $category_id, $image = null)
     {
-        $this->Image = $Image;
+        $errors = $this->validateProduct($name, $description, $price, $category_id);
+        if (!empty($errors)) {
+            return $errors;
+        }
+
+        $stmt = $this->db->prepare(
+            "INSERT INTO product (name, description, price, image, category_id)
+             VALUES (:name, :description, :price, :image, :category_id)"
+        );
+        $stmt->execute([
+            'name' => $name,
+            'description' => $description,
+            'price' => (float)$price,
+            'image' => $image,
+            'category_id' => $category_id !== null ? (int)$category_id : null,
+        ]);
+
+        return $this->db->lastInsertId();
     }
 
-    // Getter và Setter cho thuộc tính CategoryID
-    public function getCategoryID()
+    public function updateProduct($id, $name, $description, $price, $category_id, $image = null)
     {
-        return $this->CategoryID;
+        $product = $this->getProductById($id);
+        if (!$product) {
+            return false;
+        }
+
+        $errors = $this->validateProduct($name, $description, $price, $category_id);
+        if (!empty($errors)) {
+            return $errors;
+        }
+
+        $stmt = $this->db->prepare(
+            "UPDATE product
+             SET name = :name, description = :description, price = :price, image = :image, category_id = :category_id
+             WHERE id = :id"
+        );
+        $stmt->execute([
+            'id' => (int)$id,
+            'name' => $name,
+            'description' => $description,
+            'price' => (float)$price,
+            'image' => $image,
+            'category_id' => $category_id !== null ? (int)$category_id : null,
+        ]);
+
+        return true;
     }
 
-    public function setCategoryID($CategoryID)
+    public function deleteProduct($id)
     {
-        $this->CategoryID = $CategoryID;
+        $product = $this->getProductById($id);
+        if (!$product) {
+            return false;
+        }
+
+        $stmt = $this->db->prepare("DELETE FROM product WHERE id = :id");
+        return $stmt->execute(['id' => (int)$id]);
+    }
+
+    private function validateProduct($name, $description, $price, $category_id)
+    {
+        $errors = [];
+
+        if (trim($name) === '') {
+            $errors[] = 'Tên sản phẩm là bắt buộc.';
+        }
+        if (!is_numeric($price) || (float)$price <= 0) {
+            $errors[] = 'Giá phải là một số dương.';
+        }
+        if ($category_id !== null && !is_numeric($category_id)) {
+            $errors[] = 'category_id phải là một số nguyên.';
+        }
+
+        return $errors;
     }
 }
 ?>

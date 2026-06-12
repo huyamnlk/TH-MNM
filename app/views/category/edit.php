@@ -1,51 +1,77 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sửa Danh mục</title>
-    <link rel="stylesheet" href="/TH-MNM/public/css/style.css">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-</head>
-<body>
-    <div class="container-sm">
-        <h1>Sửa Danh mục</h1>
-        
-        <div class="glass-panel">
-            <?php if (!empty($errors)): ?>
-                <div class="alert">
-                    <i class="ph ph-warning-circle" style="font-size: 1.5rem;"></i>
-                    <ul>
-                        <?php foreach ($errors as $error): ?>
-                            <li><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-            <?php endif; ?>
-
-            <form method="POST" action="/TH-MNM/Category/edit/<?php echo (int)$category['id']; ?>">
-                <div class="form-group">
-                    <label for="name">Tên danh mục</label>
-                    <input type="text" id="name" name="name" placeholder="Ví dụ: Điện thoại, Laptop..." value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name'], ENT_QUOTES, 'UTF-8') : htmlspecialchars($category['name'], ENT_QUOTES, 'UTF-8'); ?>" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="description">Mô tả chi tiết</label>
-                    <textarea id="description" name="description" placeholder="Nhập mô tả danh mục..." required><?php echo isset($_POST['description']) ? htmlspecialchars($_POST['description'], ENT_QUOTES, 'UTF-8') : htmlspecialchars($category['description'], ENT_QUOTES, 'UTF-8'); ?></textarea>
-                </div>
-                
-                <button type="submit" class="btn btn-primary btn-water" style="width: 100%;">
-                    <i class="ph ph-floppy-disk" style="font-size: 1.25rem; margin-right: 0.5rem;"></i>
-                    Lưu thay đổi
-                </button>
-            </form>
-        </div>
-
-        <div style="text-align: center;">
-            <a href="/TH-MNM/Category/list" class="back-link">
-                <i class="ph ph-arrow-left"></i> Quay lại danh sách
-            </a>
-        </div>
+<?php include 'app/views/shares/header.php'; ?>
+<h1>Sửa sản phẩm</h1>
+<form id="edit-product-form">
+    <input type="hidden" id="id" name="id">
+    <div class="form-group">
+        <label for="name">Tên sản phẩm:</label>
+        <input type="text" id="name" name="name" class="form-control" required>
     </div>
-</body>
-</html>
+    <div class="form-group">
+        <label for="description">Mô tả:</label>
+        <textarea id="description" name="description" class="form-control" required></textarea>
+    </div>
+    <div class="form-group">
+        <label for="price">Giá:</label>
+        <input type="number" id="price" name="price" class="form-control" step="0.01" required>
+    </div>
+    <div class="form-group">
+        <label for="category_id">Danh mục:</label>
+        <select id="category_id" name="category_id" class="form-control" required>
+            <!-- Các danh mục sẽ được tải từ API và hiển thị tại đây -->
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+</form>
+<a href="/webbanhang/Product/list" class="btn btn-secondary mt-2">Quay lại danh sách
+    sản phẩm</a>
+<?php include 'app/views/shares/footer.php'; ?>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // const urlParams = new URLSearchParams(window.location.search);
+        const productId = <?= $editId ?>;
+        fetch(`/webbanhang/api/product/${productId}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('id').value = data.id;
+                document.getElementById('name').value = data.name;
+                document.getElementById('description').value = data.description;
+                document.getElementById('price').value = data.price;
+                document.getElementById('category_id').value = data.category_id;
+            });
+        fetch('/webbanhang/api/category')
+            .then(response => response.json())
+            .then(data => {
+                const categorySelect = document.getElementById('category_id');
+                data.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.id;
+                    option.textContent = category.name;
+                    categorySelect.appendChild(option);
+                });
+            });
+        document.getElementById('edit-product-form').addEventListener('submit',
+            function (event) {
+                event.preventDefault();
+                const formData = new FormData(this);
+                const jsonData = {};
+                formData.forEach((value, key) => {
+                    jsonData[key] = value;
+                });
+                fetch(`/webbanhang/api/product/${jsonData.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(jsonData)
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.message === 'Product updated successfully') {
+                            location.href = '/webbanhang/Product';
+                        } else {
+                            alert('Cập nhật sản phẩm thất bại');
+                        }
+                    });
+            });
+    });
+</script>

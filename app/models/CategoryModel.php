@@ -1,45 +1,91 @@
 <?php
 class CategoryModel
 {
-    private $ID;
-    private $Name;
-    private $Description;
+    private $db;
 
-    public function __construct($ID, $Name, $Description)
+    public function __construct($db)
     {
-        $this->ID = $ID;
-        $this->Name = $Name;
-        $this->Description = $Description;
+        $this->db = $db;
     }
 
-    public function getID()
+    public function getCategories()
     {
-        return $this->ID;
+        $stmt = $this->db->query("SELECT id, name, description FROM category ORDER BY id DESC");
+        return $stmt->fetchAll();
     }
 
-    public function setID($ID)
+    public function getCategoryById($id)
     {
-        $this->ID = $ID;
+        $stmt = $this->db->prepare("SELECT id, name, description FROM category WHERE id = :id");
+        $stmt->execute(['id' => (int)$id]);
+        return $stmt->fetch();
     }
 
-    public function getName()
+    public function addCategory($name, $description)
     {
-        return $this->Name;
+        $errors = $this->validateCategory($name, $description);
+        if (!empty($errors)) {
+            return $errors;
+        }
+
+        $stmt = $this->db->prepare("INSERT INTO category (name, description) VALUES (:name, :description)");
+        $stmt->execute([
+            'name' => $name,
+            'description' => $description
+        ]);
+
+        return $this->db->lastInsertId();
     }
 
-    public function setName($Name)
+    public function updateCategory($id, $name, $description)
     {
-        $this->Name = $Name;
+        $category = $this->getCategoryById($id);
+        if (!$category) {
+            return false;
+        }
+
+        $errors = $this->validateCategory($name, $description);
+        if (!empty($errors)) {
+            return $errors;
+        }
+
+        $stmt = $this->db->prepare("UPDATE category SET name = :name, description = :description WHERE id = :id");
+        $stmt->execute([
+            'id' => (int)$id,
+            'name' => $name,
+            'description' => $description
+        ]);
+
+        return true;
     }
 
-    public function getDescription()
+    public function deleteCategory($id)
     {
-        return $this->Description;
+        $category = $this->getCategoryById($id);
+        if (!$category) {
+            return false;
+        }
+
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM product WHERE category_id = :id");
+        $stmt->execute(['id' => (int)$id]);
+        $count = (int)$stmt->fetchColumn();
+        if ($count > 0) {
+            return ['message' => 'Không thể xóa danh mục vì vẫn còn sản phẩm thuộc danh mục này.'];
+        }
+
+        $stmt = $this->db->prepare("DELETE FROM category WHERE id = :id");
+        return $stmt->execute(['id' => (int)$id]);
     }
 
-    public function setDescription($Description)
+    private function validateCategory($name, $description)
     {
-        $this->Description = $Description;
+        $errors = [];
+
+        if (trim($name) === '') {
+            $errors[] = 'Tên danh mục là bắt buộc.';
+        }
+
+        return $errors;
     }
 }
 ?>
