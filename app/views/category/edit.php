@@ -1,77 +1,106 @@
-<?php include 'app/views/shares/header.php'; ?>
-<h1>Sửa sản phẩm</h1>
-<form id="edit-product-form">
-    <input type="hidden" id="id" name="id">
-    <div class="form-group">
-        <label for="name">Tên sản phẩm:</label>
-        <input type="text" id="name" name="name" class="form-control" required>
+<?php $pageTitle = 'Sửa danh mục'; include 'app/views/shares/header.php'; ?>
+
+<div class="container-sm">
+    <h1>Sửa danh mục</h1>
+    
+    <div class="glass-panel">
+        <form id="edit-category-form">
+            <input type="hidden" id="id" name="id" value="<?= htmlspecialchars($id) ?>">
+            <div class="form-group">
+                <label for="name">Tên danh mục</label>
+                <input type="text" id="name" name="name" placeholder="Nhập tên danh mục..." required>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Mô tả chi tiết</label>
+                <textarea id="description" name="description" placeholder="Nhập mô tả danh mục..."></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-water" style="width: 100%;">
+                <i class="ph ph-floppy-disk" style="font-size: 1.25rem; margin-right: 0.5rem;"></i>
+                Lưu thay đổi
+            </button>
+        </form>
     </div>
-    <div class="form-group">
-        <label for="description">Mô tả:</label>
-        <textarea id="description" name="description" class="form-control" required></textarea>
+
+    <div style="text-align: center;">
+        <a href="/TH-MNM/Category/list" class="back-link">
+            <i class="ph ph-arrow-left"></i> Quay lại danh sách
+        </a>
     </div>
-    <div class="form-group">
-        <label for="price">Giá:</label>
-        <input type="number" id="price" name="price" class="form-control" step="0.01" required>
-    </div>
-    <div class="form-group">
-        <label for="category_id">Danh mục:</label>
-        <select id="category_id" name="category_id" class="form-control" required>
-            <!-- Các danh mục sẽ được tải từ API và hiển thị tại đây -->
-        </select>
-    </div>
-    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
-</form>
-<a href="/webbanhang/Product/list" class="btn btn-secondary mt-2">Quay lại danh sách
-    sản phẩm</a>
+</div>
+
 <?php include 'app/views/shares/footer.php'; ?>
+
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        // const urlParams = new URLSearchParams(window.location.search);
-        const productId = <?= $editId ?>;
-        fetch(`/webbanhang/api/product/${productId}`)
-            .then(response => response.json())
+        const token = localStorage.getItem('jwtToken');
+        if (!token) {
+            alert('Vui lòng đăng nhập');
+            location.href = '/TH-MNM/Account/login';
+            return;
+        }
+
+        const categoryId = <?= (int)$id ?>;
+        
+        // Fetch current category info
+        fetch(`/TH-MNM/api/category/${categoryId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            }
+        })
+            .then(response => {
+                if (response.status === 401) {
+                    alert('Phiên làm việc hết hạn. Vui lòng đăng nhập lại.');
+                    location.href = '/TH-MNM/Account/login';
+                    throw new Error('Unauthorized');
+                }
+                return response.json();
+            })
             .then(data => {
-                document.getElementById('id').value = data.id;
-                document.getElementById('name').value = data.name;
-                document.getElementById('description').value = data.description;
-                document.getElementById('price').value = data.price;
-                document.getElementById('category_id').value = data.category_id;
+                document.getElementById('name').value = data.name || '';
+                document.getElementById('description').value = data.description || '';
+            })
+            .catch(error => console.error('Error fetching category data:', error));
+
+        document.getElementById('edit-category-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const jsonData = {};
+            formData.forEach((value, key) => {
+                jsonData[key] = value;
             });
-        fetch('/webbanhang/api/category')
-            .then(response => response.json())
-            .then(data => {
-                const categorySelect = document.getElementById('category_id');
-                data.forEach(category => {
-                    const option = document.createElement('option');
-                    option.value = category.id;
-                    option.textContent = category.name;
-                    categorySelect.appendChild(option);
-                });
-            });
-        document.getElementById('edit-product-form').addEventListener('submit',
-            function (event) {
-                event.preventDefault();
-                const formData = new FormData(this);
-                const jsonData = {};
-                formData.forEach((value, key) => {
-                    jsonData[key] = value;
-                });
-                fetch(`/webbanhang/api/product/${jsonData.id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(jsonData)
+
+            fetch(`/TH-MNM/api/category/${categoryId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify(jsonData)
+            })
+                .then(response => {
+                    if (response.status === 401) {
+                        alert('Phiên làm việc hết hạn. Vui lòng đăng nhập lại.');
+                        location.href = '/TH-MNM/Account/login';
+                        throw new Error('Unauthorized');
+                    }
+                    return response.json();
                 })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.message === 'Product updated successfully') {
-                            location.href = '/webbanhang/Product';
+                .then(data => {
+                    if (data.message === 'Category updated successfully') {
+                        location.href = '/TH-MNM/Category/list';
+                    } else {
+                        if (data.errors && Array.isArray(data.errors)) {
+                            alert('Cập nhật danh mục thất bại:\n' + data.errors.join('\n'));
                         } else {
-                            alert('Cập nhật sản phẩm thất bại');
+                            alert(data.message || 'Cập nhật danh mục thất bại');
                         }
-                    });
-            });
+                    }
+                })
+                .catch(error => console.error('Error updating category:', error));
+        });
     });
 </script>

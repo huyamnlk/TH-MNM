@@ -1,4 +1,5 @@
 <?php
+// Controller mặc định, hiển thị trang chủ
 class DefaultController
 {
     public function index()
@@ -6,3 +7,4 @@ class DefaultController
         include 'app/views/home/index.php';
     }
 }
+?>

@@ -59,4 +59,42 @@ include 'app/views/shares/header.php';
     </div>
 </div>
 
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+
+                fetch('/TH-MNM/Account/checkLogin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                })
+                .then(response => {
+                    if (response.status === 401) {
+                        alert('Sai tên đăng nhập hoặc mật khẩu!');
+                        throw new Error('Unauthorized');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.token) {
+                        localStorage.setItem('jwtToken', data.token);
+                        alert('Đăng nhập thành công!');
+                        location.href = '/TH-MNM/Product/list';
+                    } else {
+                        alert('Đăng nhập thất bại!');
+                    }
+                })
+                .catch(error => console.error('Error during login:', error));
+        });
+    }
+});
+</script>
+
 <?php include 'app/views/shares/footer.php'; ?>

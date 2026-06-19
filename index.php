@@ -1,59 +1,46 @@
 <?php
-session_start();
+// Front controller: điều hướng request đến controller/action
+session_start(); // Khởi động session
+
 require_once 'app/models/ProductModel.php';
 require_once 'app/helpers/SessionHelper.php';
 require_once 'app/controllers/ProductApiController.php';
 require_once 'app/controllers/CategoryApiController.php';
-// Start session
+
+// Lấy và làm sạch URL từ query string
 $url = $_GET['url'] ?? '';
 $url = rtrim($url, '/');
 $url = filter_var($url, FILTER_SANITIZE_URL);
 $url = explode('/', $url);
-// Kiểm tra phần đầu tiên của URL để xác định controller
-$controllerName = isset($url[0]) && $url[0] != '' ? ucfirst($url[0]) . 'Controller' :
-    'DefaultController';
-// Kiểm tra phần thứ hai của URL để xác định action
-$action = isset($url[1]) && $url[1] != '' ? $url[1] : 'index';
-// Định tuyến các yêu cầu API
+
+// Xác định Controller và Action từ URL
+$controllerName = isset($url[0]) && $url[0] != '' ? ucfirst($url[0]) . 'Controller' : 'DefaultController';
+$action         = isset($url[1]) && $url[1] != '' ? $url[1] : 'index';
+
+// Xử lý request đến API (VD: /Api/Product)
 if ($controllerName === 'ApiController' && isset($url[1])) {
     $apiControllerName = ucfirst($url[1]) . 'ApiController';
+
     if (file_exists('app/controllers/' . $apiControllerName . '.php')) {
         require_once 'app/controllers/' . $apiControllerName . '.php';
         $controller = new $apiControllerName();
-        $method = $_SERVER['REQUEST_METHOD'];
-        $id = $url[2] ?? null;
+        $method     = $_SERVER['REQUEST_METHOD'];
+        $id         = $url[2] ?? null;
+
+        // Ánh xạ phương thức HTTP sang action CRUD
         switch ($method) {
-            case 'GET':
-                if ($id) {
-                    $action = 'show';
-                } else {
-                    $action = 'index';
-                }
-                break;
-            case 'POST':
-                $action = 'store';
-                break;
-            case 'PUT':
-                if ($id) {
-                    $action = 'update';
-                }
-                break;
-            case 'DELETE':
-                if ($id) {
-                    $action = 'destroy';
-                }
-                break;
+            case 'GET':    $action = $id ? 'show'    : 'index';  break;
+            case 'POST':   $action = 'store';                    break;
+            case 'PUT':    if ($id) $action = 'update';          break;
+            case 'DELETE': if ($id) $action = 'destroy';         break;
             default:
                 http_response_code(405);
                 echo json_encode(['message' => 'Method Not Allowed']);
                 exit;
         }
+
         if (method_exists($controller, $action)) {
-            if ($id) {
-                call_user_func_array([$controller, $action], [$id]);
-            } else {
-                call_user_func_array([$controller, $action], []);
-            }
+            call_user_func_array([$controller, $action], $id ? [$id] : []);
         } else {
             http_response_code(404);
             echo json_encode(['message' => 'Action not found']);
@@ -65,14 +52,15 @@ if ($controllerName === 'ApiController' && isset($url[1])) {
         exit;
     }
 }
-// Tạo đối tượng controller tương ứng cho các yêu cầu không phải API
+
+// Xử lý request thông thường (giao diện web)
 if (file_exists('app/controllers/' . $controllerName . '.php')) {
     require_once 'app/controllers/' . $controllerName . '.php';
     $controller = new $controllerName();
 } else {
     die('Controller not found');
 }
-// Kiểm tra và gọi action
+
 if (method_exists($controller, $action)) {
     call_user_func_array([$controller, $action], array_slice($url, 2));
 } else {

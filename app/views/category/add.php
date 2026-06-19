@@ -1,72 +1,81 @@
-<?php include 'app/views/shares/header.php'; ?>
-<h1>Thêm sản phẩm mới</h1>
-<form id="add-product-form">
-    <div class="form-group">
-        <label for="name">Tên sản phẩm:</label>
-        <input type="text" id="name" name="name" class="form-control" required>
+<?php $pageTitle = 'Thêm danh mục mới'; include 'app/views/shares/header.php'; ?>
+
+<div class="container-sm">
+    <h1>Thêm danh mục mới</h1>
+    
+    <div class="glass-panel">
+        <form id="add-category-form">
+            <div class="form-group">
+                <label for="name">Tên danh mục</label>
+                <input type="text" id="name" name="name" placeholder="Nhập tên danh mục..." required>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Mô tả chi tiết</label>
+                <textarea id="description" name="description" placeholder="Nhập mô tả danh mục..."></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-water" style="width: 100%;">
+                <i class="ph ph-plus-circle" style="font-size: 1.25rem; margin-right: 0.5rem;"></i>
+                Thêm danh mục
+            </button>
+        </form>
     </div>
-    <div class="form-group">
-        <label for="description">Mô tả:</label>
-        <textarea id="description" name="description" class="form-control" required></textarea>
+
+    <div style="text-align: center;">
+        <a href="/TH-MNM/Category/list" class="back-link">
+            <i class="ph ph-arrow-left"></i> Quay lại danh sách
+        </a>
     </div>
-    <div class="form-group">
-        <label for="price">Giá:</label>
-        <input type="number" id="price" name="price" class="form-control" step="0.01" required>
-    </div>
-    <div class="form-group">
-        <label for="category_id">Danh mục:</label>
-        <select id="category_id" name="category_id" class="form-control" required>
-            <!-- Các danh mục sẽ được tải từ API và hiển thị tại đây -->
-        </select>
-    </div>
-    <button type="submit" class="btn btn-primary">Thêm sản phẩm</button>
-</form>
-<a href="/webbanhang/Product/list" class="btn btn-secondary mt-2">Quay lại danh sách
-    sản phẩm</a>
+</div>
+
 <?php include 'app/views/shares/footer.php'; ?>
+
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        fetch('/webbanhang/api/category')
-            .then(response => response.json())
-            .then(data => {
-                const categorySelect = document.getElementById('category_id');
-                data.forEach(category => {
-                    const option = document.createElement('option');
-                    option.value = category.id;
-                    option.textContent = category.name;
-                    categorySelect.appendChild(option);
-                });
+        const token = localStorage.getItem('jwtToken');
+        if (!token) {
+            alert('Vui lòng đăng nhập');
+            location.href = '/TH-MNM/Account/login';
+            return;
+        }
+
+        document.getElementById('add-category-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const jsonData = {};
+            formData.forEach((value, key) => {
+                jsonData[key] = value;
             });
-        document.getElementById('add-product-form').addEventListener('submit',
-            function (event) {
-                event.preventDefault();
-                const formData = new FormData(this);
-                const jsonData = {};
-                formData.forEach((value, key) => {
-                    jsonData[key] = value;
-                });
-                fetch('/webbanhang/api/product', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(jsonData)
+
+            fetch('/TH-MNM/api/category', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify(jsonData)
+            })
+                .then(response => {
+                    if (response.status === 401) {
+                        alert('Phiên làm việc hết hạn. Vui lòng đăng nhập lại.');
+                        location.href = '/TH-MNM/Account/login';
+                        throw new Error('Unauthorized');
+                    }
+                    return response.json();
                 })
-                    .then(response => response.json())
-                    .then(text => {
-                        console.log('Raw response:', text); // Log the raw response text
-                        try {
-                            const data = text;
-                            if (data.message === 'Product created successfully') {
-                                location.href = '/webbanhang/Product';
-                            } else {
-                                alert('Thêm sản phẩm thất bại');
-                            }
-                        } catch (error) {
-                            console.error('Error parsing JSON:', error);
-                            alert('Lỗi: Không thể phân tích JSON từ phản hồi của máy chủ.');
+                .then(data => {
+                    if (data.message === 'Category created successfully') {
+                        location.href = '/TH-MNM/Category/list';
+                    } else {
+                        if (data.errors && Array.isArray(data.errors)) {
+                            alert('Thêm danh mục thất bại:\n' + data.errors.join('\n'));
+                        } else {
+                            alert(data.message || 'Thêm danh mục thất bại');
                         }
-                    });
-            });
+                    }
+                })
+                .catch(error => console.error('Error creating category:', error));
+        });
     });
 </script>
